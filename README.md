@@ -94,6 +94,83 @@ Join integrity audit (recommended before training):
 PYTHONPATH=src python3 scripts/analysis/audit_join.py --sample-users 5000 --sample-size 10000
 ```
 
+## Execution Guideline (Recommended Order)
+
+Use this order for stable and reproducible runs.
+
+1. Environment check
+```bash
+source .venv/bin/activate
+python3 -V
+pip show lightgbm shap openai
+```
+
+2. Data join audit (must-run before model training)
+```bash
+PYTHONPATH=src python3 scripts/analysis/audit_join.py --sample-users 5000 --sample-size 10000
+```
+If `cb_join_rate` is near `0`, treat table `09` as effectively unavailable in interpretation.
+
+3. Run family-specific recommender (recommended)
+```bash
+# Deposit-only
+PYTHONPATH=src python3 scripts/recommender/run_recommender.py --fit --family deposit --sample-users 200 --max-train-users 800 --top-k 5
+
+# Fund-only
+PYTHONPATH=src python3 scripts/recommender/run_recommender.py --fit --family fund --sample-users 200 --max-train-users 800 --top-k 5
+```
+
+4. Run family-specific improved E2E report
+```bash
+# Deposit v2
+PYTHONPATH=src python3 scripts/recommender/improve_recommender_with_utility.py \
+  --family deposit --sample-users 120 --max-train-users 80 --max-eval-users 40 \
+  --candidate-max 80 --ks 5 10 \
+  --out-dir reports/e2e/improved_recommender_deposit_v2 \
+  --out-json reports/raw/e2e_improved_recommender_deposit_v2.json
+
+# Fund v2
+PYTHONPATH=src python3 scripts/recommender/improve_recommender_with_utility.py \
+  --family fund --sample-users 120 --max-train-users 80 --max-eval-users 40 \
+  --candidate-max 80 --ks 5 10 \
+  --out-dir reports/e2e/improved_recommender_fund_v2 \
+  --out-json reports/raw/e2e_improved_recommender_fund_v2.json
+```
+
+5. Run explanation pipeline (template or LLM)
+```bash
+# Template renderer
+PYTHONPATH=src python3 scripts/recommender/explain_recommender.py --fit --family deposit --sample-users 200 --top-k 5
+
+# OpenAI LLM renderer (grounded verbalization only)
+export OPENAI_API_KEY=your_api_key
+PYTHONPATH=src python3 scripts/recommender/explain_recommender.py \
+  --fit --family deposit --sample-users 200 --top-k 5 \
+  --use-llm-renderer --llm-model gpt-5-mini
+```
+
+6. Validate explainer metrics
+```bash
+PYTHONPATH=src python3 scripts/evaluation/evaluate_explainer.py \
+  --fit --family deposit --sample-users 300 --max-train-users 200 --max-eval-users 80 --top-k 5
+```
+
+### Where to check results
+- Main summary: `reports/e2e/main_report.md`
+- Family reports:
+  - `reports/e2e/improved_recommender_deposit_v2/report.md`
+  - `reports/e2e/improved_recommender_fund_v2/report.md`
+- Raw JSON metrics:
+  - `reports/raw/e2e_improved_recommender_deposit_v2.json`
+  - `reports/raw/e2e_improved_recommender_fund_v2.json`
+  - `reports/raw/e2e_evaluate_explainer.json`
+
+### Quick quality checklist
+- `cb_join_rate` is not silently ignored in analysis.
+- `fund ind_proxy_label` is not collapsed to all zeros.
+- `deposit` positive-per-query diagnostics are non-degenerate.
+- Do not use only circular metrics (`proxy_label`, `hybrid_label`) as main KPI.
+
 ## Output format
 
 ```json
