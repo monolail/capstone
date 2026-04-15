@@ -8,14 +8,26 @@ from typing import Dict
 @dataclass
 class RecommenderConfig:
     data_root: Path = Path("data")
-    table11_dir: str = "11.통신카드CB 결합정보"
-    table09_dir: str = "09.개인 CB정보"
-    table12_dir: str = "12.금융상품정보"
+    # 원본 합성데이터 ZIP 경로 (추가)
+    raw_data_root: Path = Path(r"C:\Users\이호준\OneDrive\바탕 화면\3학년 1학기\데이터캡스톤 디자인\117.금융 합성데이터\3.개방데이터\1.데이터\1. 합성데이터")
+    
+    table11_dir: str = "table11"
+    table09_dir: str = "table09"
+    table12_dir: str = "table12"
 
     user_key_11: str = "CUST_ID"
     user_key_09: str = "ID"
     # "all" | "deposit" | "fund"
     recommender_family: str = "all"
+
+    # TPS v2.0 가중치 설정 (사용자 정의)
+    tps_weights: Dict[str, float] = field(
+        default_factory=lambda: {
+            "trust": 0.4,
+            "activity": 0.3,
+            "potential": 0.3
+        }
+    )
 
     candidate_min: int = 50
     candidate_max: int = 100
