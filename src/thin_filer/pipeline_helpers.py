@@ -192,3 +192,16 @@ def _ndcg_at_k(y_true: np.ndarray, y_score: np.ndarray, k: int) -> float:
     if idcg <= 0:
         return 0.0
     return dcg / idcg
+
+
+def _gini_coefficient(counts: np.ndarray) -> float:
+    """Calculate the Gini coefficient of a distribution (e.g., item recommendation frequencies).
+    0 = perfect equality (diversity), 1 = perfect inequality (bias).
+    """
+    if counts.size == 0 or np.sum(counts) == 0:
+        return 0.0
+    # Mean absolute difference
+    n = len(counts)
+    s_counts = np.sort(counts)
+    index = np.arange(1, n + 1)
+    return float((np.sum((2 * index - n - 1) * s_counts)) / (n * np.sum(s_counts)))
